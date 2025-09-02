@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Faridabad Vehicle Tracking Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <style>
+    #map { height: 100vh; width: 100%; }
+    .vehicle-label {
+      background: white;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toggle Filter Button -->
+<button id="toggleFilter" style="
+  position:absolute;top:10px;left:10px;z-index:1000;
+  background:#ff9933;color:white;border:none;padding:8px 14px;
+  border-radius:6px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+  Show Filters
+</button>
+
+<!-- Filter Container -->
+<div id="filterContainer" style="
+  display:none;
+  position:absolute;top:60px;left:10px;z-index:1000;
+  background:white;padding:10px;border-radius:8px;
+  box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+  <h4>Vehicle Filters</h4>
+  <label><input type="checkbox" class="filter" value="Taxi" checked> Taxi</label><br>
+  <label><input type="checkbox" class="filter" value="Bus" checked> Bus</label><br>
+  <label><input type="checkbox" class="filter" value="Bike" checked> Bike</label><br>
+  <label><input type="checkbox" class="filter" value="Auto" checked> Auto</label><br>
+  <label><input type="checkbox" class="filter" value="Ambulance" checked> Ambulance</label><br>
+  <label><input type="checkbox" class="filter" value="Fire" checked> Fire</label><br>
+  <label><input type="checkbox" class="filter" value="Police" checked> Police</label><br>
+</div>
+
+<!-- Find My Location Button -->
+<button onclick="findMyLocation()" style="
+  position:absolute;top:10px;right:10px;z-index:1000;
+  background:#138808;color:white;border:none;padding:8px 14px;
+  border-radius:6px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+  Find My Location
+</button>
+
+<div id="map"></div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+  // Initialize map on Faridabad area
+  var map = L.map('map').setView([28.402, 77.317], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors'
+  }).addTo(map);
+
+  // Vehicle icons
+  const vehicleIcons = {
+    Taxi: "🚖",
+    Bus: "🚌",
+    Bike: "🏍️",
+    Auto: "🚙",
+    Ambulance: "🚑",
+    Fire: "🚒",
+    Police: "🚓"
+  };
+
+  // Store vehicles
+  let vehicles = [];
+
+  // Generate random vehicles
+  const types = Object.keys(vehicleIcons);
+  for (let i = 0; i < 1200; i++) {
+    let type = types[Math.floor(Math.random() * types.length)];
+    let lat = 28.35 + Math.random() * 0.12;  // Faridabad area
+    let lng = 77.25 + Math.random() * 0.12;
+
+    let marker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        className: "vehicle-label",
+        html: vehicleIcons[type],
+        iconSize: [20, 20]
+      })
+    }).addTo(map);
+
+    marker.vehicleType = type;
+    vehicles.push(marker);
+  }
+
+  // Move vehicles randomly
+  setInterval(() => {
+    vehicles.forEach(marker => {
+      let latlng = marker.getLatLng();
+      let newLat = latlng.lat + (Math.random() - 0.5) * 0.001;
+      let newLng = latlng.lng + (Math.random() - 0.5) * 0.001;
+      marker.setLatLng([newLat, newLng]);
+    });
+  }, 1000);
+
+  // Filter function
+  document.querySelectorAll(".filter").forEach(cb => {
+    cb.addEventListener("change", () => {
+      let activeFilters = Array.from(document.querySelectorAll(".filter:checked")).map(c => c.value);
+      vehicles.forEach(marker => {
+        if (activeFilters.includes(marker.vehicleType)) {
+          if (!map.hasLayer(marker)) marker.addTo(map);
+        } else {
+          if (map.hasLayer(marker)) map.removeLayer(marker);
+        }
+      });
+    });
+  });
+
+  // Toggle filter container
+  const toggleBtn = document.getElementById("toggleFilter");
+  const filterContainer = document.getElementById("filterContainer");
+  toggleBtn.addEventListener("click", () => {
+    if (filterContainer.style.display === "none") {
+      filterContainer.style.display = "block";
+      toggleBtn.innerText = "Hide Filters";
+    } else {
+      filterContainer.style.display = "none";
+      toggleBtn.innerText = "Show Filters";
+    }
+  });
+
+  // Find my location
+  function findMyLocation() {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(pos => {
+        let lat = pos.coords.latitude;
+        let lng = pos.coords.longitude;
+        L.marker([lat, lng]).addTo(map)
+          .bindPopup("📍 You are here").openPopup();
+        map.setView([lat, lng], 15);
+      }, () => {
+        alert("Unable to fetch your location.");
+      });
+    } else {
+      alert("Geolocation not supported in your browser.");
+    }
+  }
+</script>
+</body>
+</html>
